@@ -84,6 +84,13 @@ run_or_handoff() {
   esac
 }
 
+run_core_or_handoff() {
+  local label="$1"
+  shift
+  run_or_handoff "$label" \
+    bash -c 'cd "$1" && shift && exec "$@"' _ "$CORE" "$@"
+}
+
 mkdir -p "$SRC"
 if [ -f "$CORE_COMMIT" ]; then
   recorded_commit="$(cat "$CORE_COMMIT")"
@@ -111,11 +118,11 @@ mkdir -p "$NPM_CONFIG_STORE_DIR" "$COREPACK_HOME"
 
 if [ ! -f "$SYNC_READY" ]; then
   if [ -f "$SYNC_STARTED" ]; then
-    run_or_handoff "Resuming Brave/Chromium dependency sync" \
+    run_core_or_handoff "Resuming Brave/Chromium dependency sync" \
       pnpm run sync --no-history
   else
     : > "$SYNC_STARTED"
-    run_or_handoff "Initializing Brave/Chromium dependencies" \
+    run_core_or_handoff "Initializing Brave/Chromium dependencies" \
       pnpm run init --no-history
   fi
   : > "$SYNC_READY"
@@ -141,7 +148,7 @@ ENV
 free_gib="$(df -BG --output=avail "$WORK" | tail -n 1 | tr -dc '0-9')"
 log "available disk before Chromium compilation: ${free_gib:-unknown} GiB"
 
-run_or_handoff "Building Brave Release for Intel Core 2 (Ninja jobs: 2)" \
+run_core_or_handoff "Building Brave Release for Intel Core 2 (Ninja jobs: 2)" \
   pnpm run build Release --ninja jobs:2
 
 [ -d "$OUT" ] || die "expected Release output directory is missing: $OUT"
