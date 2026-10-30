@@ -124,12 +124,17 @@ def validate_manifest(
         "brave_core_ref": brave_core_ref,
     }
     for key, value in expected.items():
-        if manifest.get(key) != value:
+        actual = manifest.get(key)
+        if key in {"format", "run_id", "attempt", "stage"} and (
+            not isinstance(actual, int) or isinstance(actual, bool)
+        ):
+            fail(f"checkpoint manifest {key} has an invalid type")
+        if actual != value:
             fail(f"checkpoint manifest {key} mismatch")
-    if require_complete and manifest.get("complete") is not True:
-        fail("checkpoint manifest is not marked complete")
-    if not require_complete and manifest.get("complete") not in (False, True):
+    if not isinstance(manifest.get("complete"), bool):
         fail("checkpoint manifest has an invalid completion marker")
+    if require_complete and manifest["complete"] is not True:
+        fail("checkpoint manifest is not marked complete")
     commit = manifest.get("brave_core_commit")
     if commit and not re.fullmatch(r"[0-9a-f]{40}", str(commit)):
         fail("checkpoint manifest has an invalid Brave Core commit")
@@ -272,7 +277,9 @@ def stream_upload(args: argparse.Namespace) -> None:
     while True:
         index = len(volumes) + 1
         if index > MAX_VOLUMES:
-            fail(f"checkpoint exceeds the {MAX_VOLUMES}-volume release limit")
+            if stream.read(1):
+                fail(f"checkpoint exceeds the {MAX_VOLUMES}-volume release limit")
+            break
         asset_name = f"{prefix}-tree.tar.zst.{index:03d}"
         temp_path = temp_dir / f".core2-release-volume-{index:03d}"
         size = 0
