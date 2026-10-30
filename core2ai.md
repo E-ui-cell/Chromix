@@ -92,15 +92,18 @@ The workflow allows up to eight sequential jobs, each below the six-hour job
 limit. Each stage runs for up to four hours, then stores a zstd-compressed,
 metadata-preserving snapshot of the Brave/Chromium source and `out/Release`
 tree. The next job restores the snapshot and resumes with Ninja's incremental
-state. Numbered chunks smaller than 2 GB are uploaded to a run-scoped GitHub
+state. The archive is streamed into 1.8-billion-byte chunks, so the runner only
+needs bounded temporary space for one upload chunk instead of a second copy of
+the entire compressed tree. Chunks are uploaded to a run-scoped GitHub
 prerelease, with a manifest that records the repository, run/attempt/stage,
-Brave Core ref and commit, and every chunk's size. Restore validates the
-manifest and complete chunk sequence before extracting. A newer checkpoint is
-published and verified before older stage assets are deleted, so interruption
-during upload leaves the previous checkpoint intact. Only the newest completed
-stage is kept in each run's prerelease. The final stage checkpoint includes
-`src/out/Release`; the browser executable is `brave` (or `chrome` if provided
-by the selected source).
+Brave Core ref and commit, each chunk's size, and SHA-256. A checkpoint is
+marked complete only after the archive pipeline succeeds and all release
+assets are verified. Restore checks the manifest, chunk sequence, sizes, and
+hashes before extracting. A newer checkpoint is finalized before older stage
+assets are deleted, so interruption during upload leaves the previous
+checkpoint intact. Only the newest completed stage is kept in each run's
+prerelease. The final stage checkpoint includes `src/out/Release`; the browser
+executable is `brave` (or `chrome` if provided by the selected source).
 
 If a run stops after publishing a checkpoint, dispatch a new run with
 `resume_run_id`, `resume_stage`, and `resume_attempt` set to the checkpoint's
@@ -110,7 +113,8 @@ logged every five minutes during compilation to help determine whether the
 checkout, output tree, and checkpoint fit on the standard runner. Each run
 creates a prerelease named `core2-brave-<run-id>-attempt-<attempt>`; delete
 that prerelease manually after the build if you no longer need its final
-checkpoint.
+checkpoint. The write-capable GitHub token is only provided to the checkpoint
+download/finalization steps, not to the Chromium compiler.
 
 The sync phase uses `pnpm run init --no-history` once, then `pnpm run sync
 --no-history` if initialization was interrupted. Each later stage validates the

@@ -163,6 +163,38 @@ jobs:
             "${RUNNER_TEMP}/core2-work" '${{ inputs.stage }}' "$BRAVE_CORE_REF" 8 \
             2>&1 | tee "${RUNNER_TEMP}/core2-stage-${{ inputs.stage }}.log"
 
+      - name: Stream checkpoint chunks to GitHub Release
+        id: checkpoint
+        if: always() && steps.stage.outputs.checkpoint_needed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CORE2_STAGE: ${{ inputs.stage }}
+          CORE2_WORKDIR: ${{ runner.temp }}/core2-work
+          CORE2_CHECKPOINT_TEMP_DIR: ${{ runner.temp }}/core2-work/.snapshot-stage-${{ inputs.stage }}/stage
+          BRAVE_CORE_REF: ${{ inputs.brave_core_ref }}
+        run: |
+          set -euo pipefail
+          CHROMIX_SNAPSHOT_MAX_SLOTS=1 \
+          CHROMIX_SNAPSHOT_MAX_VOLUMES=64 \
+          bash build/posix/ci-parts.sh \
+            "$CORE2_WORKDIR" "$CORE2_CHECKPOINT_TEMP_DIR" build/core2/release-stream.sh
+          echo "snapshot_ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Commit checkpoint manifest and prune previous stage
+        if: always() && steps.checkpoint.outputs.snapshot_ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHECKPOINT_STAGE: ${{ inputs.stage }}
+          BRAVE_CORE_REF: ${{ inputs.brave_core_ref }}
+        run: |
+          set -euo pipefail
+          python3 tools/core2_release_checkpoint.py finalize \
+            --repo "$GITHUB_REPOSITORY" \
+            --run-id "$GITHUB_RUN_ID" \
+            --attempt "$GITHUB_RUN_ATTEMPT" \
+            --stage "$CHECKPOINT_STAGE" \
+            --brave-core-ref "$BRAVE_CORE_REF"
+
       - name: Upload stage log
         if: always()
         uses: actions/upload-artifact@v4
@@ -174,22 +206,3 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
           compression-level: 0
-
-      - name: Publish checkpoint chunks to GitHub Release
-        if: always() && steps.stage.outputs.snapshot_ready == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          CHECKPOINT_RUN_ID: ${{ github.run_id }}
-          CHECKPOINT_ATTEMPT: ${{ github.run_attempt }}
-          CHECKPOINT_STAGE: ${{ inputs.stage }}
-          BRAVE_CORE_REF: ${{ inputs.brave_core_ref }}
-        run: |
-          set -euo pipefail
-          python3 tools/core2_release_checkpoint.py upload \
-            --repo "$GITHUB_REPOSITORY" \
-            --run-id "$CHECKPOINT_RUN_ID" \
-            --attempt "$CHECKPOINT_ATTEMPT" \
-            --stage "$CHECKPOINT_STAGE" \
-            --brave-core-ref "$BRAVE_CORE_REF" \
-            --snapshot "${RUNNER_TEMP}/core2-work/.snapshot-stage-${CHECKPOINT_STAGE}" \
-            --workdir "${RUNNER_TEMP}/core2-work"

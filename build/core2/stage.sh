@@ -37,20 +37,10 @@ host_arch="$(uname -m)"
 [ "$host_arch" = "x86_64" ] ||
   die "Core 2 build requires an x86_64 runner (found $host_arch)"
 
-snapshot_tree() {
-  local snapshot="$WORK/.snapshot-stage-$STAGE"
-  log "snapshotting source and Ninja state"
-  CHROMIX_SNAPSHOT_MAX_SLOTS=1 \
-  CHROMIX_SNAPSHOT_MAX_VOLUMES=64 \
-  CHROMIX_SNAPSHOT_VOLUME_BYTES=$((18 * 1024 * 1024 * 1024 / 10)) \
-    bash "$REPO/build/posix/ci-parts.sh" "$WORK" "$snapshot"
-  emit snapshot_ready true
-}
-
 handoff() {
   local reason="$1"
-  log "$reason; saving resumable checkpoint"
-  snapshot_tree
+  log "$reason; requesting a resumable checkpoint"
+  emit checkpoint_needed true
   emit finished false
   if (( STAGE >= MAX_STAGES )); then
     die "stage $STAGE reached the $MAX_STAGES-stage limit before the build completed"
@@ -94,6 +84,7 @@ if [ -f "$CORE_REF_FILE" ]; then
 else
   printf '%s\n' "$BRAVE_CORE_REF" > "$CORE_REF_FILE"
 fi
+emit checkpoint_needed true
 if [ -f "$CORE_COMMIT" ]; then
   recorded_commit="$(cat "$CORE_COMMIT")"
   actual_commit="$(git -C "$CORE" rev-parse HEAD 2>/dev/null)" ||
@@ -192,5 +183,4 @@ use_debug_fission=false
 ninja=j:2
 EOF
 log "Core 2-compatible Brave Release build completed at $OUT"
-snapshot_tree
 emit finished true

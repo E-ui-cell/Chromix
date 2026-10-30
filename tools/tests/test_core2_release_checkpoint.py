@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import sys
 import tempfile
 import unittest
@@ -31,6 +32,14 @@ class Core2ReleaseCheckpointTest(unittest.TestCase):
         return volumes
 
     def manifest(self, volumes: list[Path]) -> dict:
+        metadata = [
+            {
+                "asset": f"stage-03-{path.name}",
+                "size": path.stat().st_size,
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            }
+            for path in volumes
+        ]
         return build_manifest(
             "E-ui-cell/Chromix",
             "123456",
@@ -38,28 +47,37 @@ class Core2ReleaseCheckpointTest(unittest.TestCase):
             "3",
             "v1.101.7",
             "a" * 40,
-            volumes,
+            metadata,
+            complete=True,
         )
 
     def test_builds_and_validates_numbered_checkpoint_manifest(self) -> None:
         manifest = self.manifest(self.make_volumes(2))
         assets = validate_manifest(
-            manifest, "E-ui-cell/Chromix", "123456", "2", "3", "v1.101.7"
+            manifest,
+            "E-ui-cell/Chromix",
+            "123456",
+            "2",
+            "3",
+            "v1.101.7",
+            require_complete=True,
         )
-        self.assertEqual(
-            assets,
-            [
-                ("stage-03-tree.tar.zst.001", len(b"checkpoint")),
-                ("stage-03-tree.tar.zst.002", len(b"checkpoint")),
-            ],
-        )
+        self.assertEqual([asset["asset"] for asset in assets],
+                         ["stage-03-tree.tar.zst.001", "stage-03-tree.tar.zst.002"])
+        self.assertTrue(all(asset["size"] == len(b"checkpoint") for asset in assets))
         self.assertEqual(release_tag("123456", "2"), "core2-brave-123456-attempt-2")
 
     def test_rejects_mismatched_checkpoint_identity(self) -> None:
         manifest = self.manifest(self.make_volumes(1))
         with self.assertRaisesRegex(CheckpointError, "run_id mismatch"):
             validate_manifest(
-                manifest, "E-ui-cell/Chromix", "999999", "2", "3", "v1.101.7"
+                manifest,
+                "E-ui-cell/Chromix",
+                "999999",
+                "2",
+                "3",
+                "v1.101.7",
+                require_complete=True,
             )
 
     def test_rejects_noncontiguous_volume_manifest(self) -> None:
@@ -67,7 +85,27 @@ class Core2ReleaseCheckpointTest(unittest.TestCase):
         manifest["volumes"][1]["asset"] = "stage-03-tree.tar.zst.003"
         with self.assertRaisesRegex(CheckpointError, "not contiguous"):
             validate_manifest(
-                manifest, "E-ui-cell/Chromix", "123456", "2", "3", "v1.101.7"
+                manifest,
+                "E-ui-cell/Chromix",
+                "123456",
+                "2",
+                "3",
+                "v1.101.7",
+                require_complete=True,
+            )
+
+    def test_rejects_provisional_manifest_for_resume(self) -> None:
+        manifest = self.manifest(self.make_volumes(1))
+        manifest["complete"] = False
+        with self.assertRaisesRegex(CheckpointError, "not marked complete"):
+            validate_manifest(
+                manifest,
+                "E-ui-cell/Chromix",
+                "123456",
+                "2",
+                "3",
+                "v1.101.7",
+                require_complete=True,
             )
 
 

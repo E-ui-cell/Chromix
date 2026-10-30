@@ -11,8 +11,9 @@
 # the real constraint.
 set -euo pipefail
 
-ROOT="${1:?usage: ci-parts.sh ROOT PARTS_DIR}"
-PARTS_DIR="${2:?usage: ci-parts.sh ROOT PARTS_DIR}"
+ROOT="${1:?usage: ci-parts.sh ROOT PARTS_DIR [STREAMER]}"
+PARTS_DIR="${2:?usage: ci-parts.sh ROOT PARTS_DIR [STREAMER]}"
+STREAMER="${3:-}"
 MAX_SLOTS="${CHROMIX_SNAPSHOT_MAX_SLOTS:-4}"
 MAX_VOLUMES="${CHROMIX_SNAPSHOT_MAX_VOLUMES:-8}"
 # Overridable for tests; production keeps each volume under the per-artifact
@@ -61,6 +62,20 @@ esac
 # POSIX pax preserves nanosecond mtimes with both GNU and BSD tar.
 # Repeat directory metadata last, children before parents, for BSD re-restores.
 # Keep the initial traversal order for GNU tar's deferred symlink restoration.
+if [ -n "$STREAMER" ]; then
+  [ -f "$STREAMER" ] || { echo "snapshot stream handler does not exist: $STREAMER" >&2; exit 1; }
+  (
+    cd -- "$ROOT"
+    find . \( "${find_excludes[@]}" \) -prune -o -print0
+    find . \( "${find_excludes[@]}" \) -prune -o -type d -print0 |
+      TMPDIR="$stage_dir" LC_ALL=C sort -zr
+  ) | tar --format=pax -cpf - --no-recursion --null -C "$ROOT" -T - |
+    zstd -T0 -3 -c |
+    bash "$STREAMER"
+  echo "==> streamed checkpoint archive"
+  exit 0
+fi
+
 (
   cd -- "$ROOT"
   find . \( "${find_excludes[@]}" \) -prune -o -print0
