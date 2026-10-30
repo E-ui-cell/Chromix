@@ -15,7 +15,7 @@ on:
         default: v1.101.7
         required: true
       resume_run_id:
-        description: Optional workflow run ID containing a prior checkpoint (artifacts retained 7 days)
+        description: Optional prior workflow run ID containing a Core 2 checkpoint release
         type: string
         default: ''
         required: false
@@ -32,7 +32,7 @@ on:
 
 permissions:
   actions: read
-  contents: read
+  contents: write
 
 concurrency:
   group: core2-brave-${{ github.ref }}

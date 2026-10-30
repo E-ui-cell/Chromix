@@ -42,7 +42,7 @@ on:
 
 permissions:
   actions: read
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -120,32 +120,28 @@ jobs:
           version: 11.11.0
           run_install: false
 
-      - name: Download previous stage checkpoint
-        if: inputs.stage > 1
-        uses: actions/download-artifact@v4
-        with:
-          pattern: core2-brave-run-${{ github.run_id }}-stage-${{ inputs.previous_stage }}-attempt-${{ inputs.previous_attempt }}-part*
-          merge-multiple: true
-          path: ${{ runner.temp }}/core2-restore
-
-      - name: Download checkpoint from an earlier workflow run
-        if: inputs.stage == 1 && inputs.resume_run_id != ''
-        uses: actions/download-artifact@v4
-        with:
-          pattern: core2-brave-run-${{ inputs.resume_run_id }}-stage-${{ inputs.resume_stage }}-attempt-${{ inputs.resume_attempt }}-part*
-          run-id: ${{ inputs.resume_run_id }}
-          github-token: ${{ github.token }}
-          merge-multiple: true
-          path: ${{ runner.temp }}/core2-restore
+      - name: Download and verify checkpoint release
+        if: inputs.stage > 1 || (inputs.stage == 1 && inputs.resume_run_id != '')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHECKPOINT_RUN_ID: ${{ inputs.stage > 1 && github.run_id || inputs.resume_run_id }}
+          CHECKPOINT_STAGE: ${{ inputs.stage > 1 && inputs.previous_stage || inputs.resume_stage }}
+          CHECKPOINT_ATTEMPT: ${{ inputs.stage > 1 && inputs.previous_attempt || inputs.resume_attempt }}
+          BRAVE_CORE_REF: ${{ inputs.brave_core_ref }}
+        run: |
+          set -euo pipefail
+          python3 tools/core2_release_checkpoint.py download \
+            --repo "$GITHUB_REPOSITORY" \
+            --run-id "$CHECKPOINT_RUN_ID" \
+            --attempt "$CHECKPOINT_ATTEMPT" \
+            --stage "$CHECKPOINT_STAGE" \
+            --brave-core-ref "$BRAVE_CORE_REF" \
+            --destination "${RUNNER_TEMP}/core2-restore"
 
       - name: Restore previous stage checkpoint
         if: inputs.stage > 1 || (inputs.stage == 1 && inputs.resume_run_id != '')
-        env:
-          STAGE: ${{ inputs.stage }}
-          PREVIOUS_ATTEMPT: ${{ inputs.previous_attempt }}
         run: |
           set -euo pipefail
-          if [ "$STAGE" -gt 1 ]; then test -n "$PREVIOUS_ATTEMPT"; fi
           bash build/posix/restore-snapshot.sh \
             "${RUNNER_TEMP}/core2-restore" "${RUNNER_TEMP}/core2-work"
 
@@ -177,147 +173,21 @@ jobs:
           retention-days: 14
           compression-level: 0
 
-      - name: Upload checkpoint part 1
+      - name: Publish checkpoint chunks to GitHub Release
         if: always() && steps.stage.outputs.snapshot_ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: core2-brave-run-${{ github.run_id }}-stage-${{ inputs.stage }}-attempt-${{ github.run_attempt }}-part01
-          path: ${{ runner.temp }}/core2-work/.snapshot-stage-${{ inputs.stage }}/p1/
-          if-no-files-found: warn
-          retention-days: 7
-          compression-level: 0
-      - name: Upload checkpoint part 2
-        if: always() && steps.stage.outputs.snapshot_ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: core2-brave-run-${{ github.run_id }}-stage-${{ inputs.stage }}-attempt-${{ github.run_attempt }}-part02
-          path: ${{ runner.temp }}/core2-work/.snapshot-stage-${{ inputs.stage }}/p2/
-          if-no-files-found: warn
-          retention-days: 7
-          compression-level: 0
-      - name: Upload checkpoint part 3
-        if: always() && steps.stage.outputs.snapshot_ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: core2-brave-run-${{ github.run_id }}-stage-${{ inputs.stage }}-attempt-${{ github.run_attempt }}-part03
-          path: ${{ runner.temp }}/core2-work/.snapshot-stage-${{ inputs.stage }}/p3/
-          if-no-files-found: warn
-          retention-days: 7
-          compression-level: 0
-      - name: Upload checkpoint part 4
-        if: always() && steps.stage.outputs.snapshot_ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: core2-brave-run-${{ github.run_id }}-stage-${{ inputs.stage }}-attempt-${{ github.run_attempt }}-part04
-          path: ${{ runner.temp }}/core2-work/.snapshot-stage-${{ inputs.stage }}/p4/
-          if-no-files-found: warn
-          retention-days: 7
-          compression-level: 0
-      - name: Upload checkpoint part 5
-        if: always() && steps.stage.outputs.snapshot_ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: core2-brave-run-${{ github.run_id }}-stage-${{ inputs.stage }}-attempt-${{ github.run_attempt }}-part05
-          path: ${{ runner.temp }}/core2-work/.snapshot-stage-${{ inputs.stage }}/p5/
-          if-no-files-found: warn
-          retention-days: 7
-          compression-level: 0
-      - name: Upload checkpoint part 6
-        if: always() && steps.stage.outputs.snapshot_ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: core2-brave-run-${{ github.run_id }}-stage-${{ inputs.stage }}-attempt-${{ github.run_attempt }}-part06
-          path: ${{ runner.temp }}/core2-work/.snapshot-stage-${{ inputs.stage }}/p6/
-          if-no-files-found: warn
-          retention-days: 7
-          compression-level: 0
-      - name: Upload checkpoint part 7
-        if: always() && steps.stage.outputs.snapshot_ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: core2-brave-run-${{ github.run_id }}-stage-${{ inputs.stage }}-attempt-${{ github.run_attempt }}-part07
-          path: ${{ runner.temp }}/core2-work/.snapshot-stage-${{ inputs.stage }}/p7/
-          if-no-files-found: warn
-          retention-days: 7
-          compression-level: 0
-      - name: Upload checkpoint part 8
-        if: always() && steps.stage.outputs.snapshot_ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: core2-brave-run-${{ github.run_id }}-stage-${{ inputs.stage }}-attempt-${{ github.run_attempt }}-part08
-          path: ${{ runner.temp }}/core2-work/.snapshot-stage-${{ inputs.stage }}/p8/
-          if-no-files-found: warn
-          retention-days: 7
-          compression-level: 0
-      - name: Upload checkpoint part 9
-        if: always() && steps.stage.outputs.snapshot_ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: core2-brave-run-${{ github.run_id }}-stage-${{ inputs.stage }}-attempt-${{ github.run_attempt }}-part09
-          path: ${{ runner.temp }}/core2-work/.snapshot-stage-${{ inputs.stage }}/p9/
-          if-no-files-found: warn
-          retention-days: 7
-          compression-level: 0
-      - name: Upload checkpoint part 10
-        if: always() && steps.stage.outputs.snapshot_ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: core2-brave-run-${{ github.run_id }}-stage-${{ inputs.stage }}-attempt-${{ github.run_attempt }}-part10
-          path: ${{ runner.temp }}/core2-work/.snapshot-stage-${{ inputs.stage }}/p10/
-          if-no-files-found: warn
-          retention-days: 7
-          compression-level: 0
-      - name: Upload checkpoint part 11
-        if: always() && steps.stage.outputs.snapshot_ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: core2-brave-run-${{ github.run_id }}-stage-${{ inputs.stage }}-attempt-${{ github.run_attempt }}-part11
-          path: ${{ runner.temp }}/core2-work/.snapshot-stage-${{ inputs.stage }}/p11/
-          if-no-files-found: warn
-          retention-days: 7
-          compression-level: 0
-      - name: Upload checkpoint part 12
-        if: always() && steps.stage.outputs.snapshot_ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: core2-brave-run-${{ github.run_id }}-stage-${{ inputs.stage }}-attempt-${{ github.run_attempt }}-part12
-          path: ${{ runner.temp }}/core2-work/.snapshot-stage-${{ inputs.stage }}/p12/
-          if-no-files-found: warn
-          retention-days: 7
-          compression-level: 0
-      - name: Upload checkpoint part 13
-        if: always() && steps.stage.outputs.snapshot_ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: core2-brave-run-${{ github.run_id }}-stage-${{ inputs.stage }}-attempt-${{ github.run_attempt }}-part13
-          path: ${{ runner.temp }}/core2-work/.snapshot-stage-${{ inputs.stage }}/p13/
-          if-no-files-found: warn
-          retention-days: 7
-          compression-level: 0
-      - name: Upload checkpoint part 14
-        if: always() && steps.stage.outputs.snapshot_ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: core2-brave-run-${{ github.run_id }}-stage-${{ inputs.stage }}-attempt-${{ github.run_attempt }}-part14
-          path: ${{ runner.temp }}/core2-work/.snapshot-stage-${{ inputs.stage }}/p14/
-          if-no-files-found: warn
-          retention-days: 7
-          compression-level: 0
-      - name: Upload checkpoint part 15
-        if: always() && steps.stage.outputs.snapshot_ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: core2-brave-run-${{ github.run_id }}-stage-${{ inputs.stage }}-attempt-${{ github.run_attempt }}-part15
-          path: ${{ runner.temp }}/core2-work/.snapshot-stage-${{ inputs.stage }}/p15/
-          if-no-files-found: warn
-          retention-days: 7
-          compression-level: 0
-      - name: Upload checkpoint part 16
-        if: always() && steps.stage.outputs.snapshot_ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: core2-brave-run-${{ github.run_id }}-stage-${{ inputs.stage }}-attempt-${{ github.run_attempt }}-part16
-          path: ${{ runner.temp }}/core2-work/.snapshot-stage-${{ inputs.stage }}/p16/
-          if-no-files-found: warn
-          retention-days: 7
-          compression-level: 0
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHECKPOINT_RUN_ID: ${{ github.run_id }}
+          CHECKPOINT_ATTEMPT: ${{ github.run_attempt }}
+          CHECKPOINT_STAGE: ${{ inputs.stage }}
+          BRAVE_CORE_REF: ${{ inputs.brave_core_ref }}
+        run: |
+          set -euo pipefail
+          python3 tools/core2_release_checkpoint.py upload \
+            --repo "$GITHUB_REPOSITORY" \
+            --run-id "$CHECKPOINT_RUN_ID" \
+            --attempt "$CHECKPOINT_ATTEMPT" \
+            --stage "$CHECKPOINT_STAGE" \
+            --brave-core-ref "$BRAVE_CORE_REF" \
+            --snapshot "${RUNNER_TEMP}/core2-work/.snapshot-stage-${CHECKPOINT_STAGE}" \
+            --workdir "${RUNNER_TEMP}/core2-work"
