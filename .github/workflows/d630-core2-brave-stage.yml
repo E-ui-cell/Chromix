@@ -54,6 +54,8 @@ jobs:
       snapshot_attempt: ${{ steps.origin.outputs.attempt }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Record checkpoint attempt
         id: origin

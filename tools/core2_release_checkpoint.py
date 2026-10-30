@@ -55,9 +55,11 @@ def build_manifest(
     volumes: list[Path],
 ) -> dict:
     run_number, attempt_number, stage_number = validate_identity(run_id, attempt, stage)
-    if not re.fullmatch(r"[A-Za-z0-9_.+/-]{1,200}", brave_core_ref):
+    if not 1 <= len(brave_core_ref) <= 200 or any(
+        ord(character) < 32 or ord(character) == 127 for character in brave_core_ref
+    ):
         fail("Brave Core ref contains unsupported characters")
-    if not re.fullmatch(r"[0-9a-f]{40}", core_commit):
+    if core_commit and not re.fullmatch(r"[0-9a-f]{40}", core_commit):
         fail("Brave Core commit must be a full lowercase Git SHA")
     if not repo or "/" not in repo or len(repo) > 200:
         fail("invalid GitHub repository name")
@@ -110,7 +112,8 @@ def validate_manifest(
     for key, value in expected.items():
         if manifest.get(key) != value:
             fail(f"checkpoint manifest {key} mismatch")
-    if not re.fullmatch(r"[0-9a-f]{40}", str(manifest.get("brave_core_commit", ""))):
+    commit = manifest.get("brave_core_commit")
+    if commit and not re.fullmatch(r"[0-9a-f]{40}", str(commit)):
         fail("checkpoint manifest has an invalid Brave Core commit")
 
     volumes = manifest.get("volumes")
@@ -174,18 +177,19 @@ def ensure_release(repo: str, tag: str, run_id: str) -> None:
 
 
 def upload_checkpoint(args: argparse.Namespace) -> None:
+    if not os.environ.get("GH_TOKEN") and not os.environ.get("GITHUB_TOKEN"):
+        fail("GH_TOKEN or GITHUB_TOKEN is required to access release assets")
     run_id, attempt, stage = validate_identity(args.run_id, args.attempt, args.stage)
     volumes = [Path(path) for path in volume_paths(str(args.snapshot))]
     commit_file = args.workdir / ".core2-brave-core-commit"
-    if not commit_file.is_file():
-        fail(f"missing pinned Brave Core commit file: {commit_file}")
+    commit = commit_file.read_text(encoding="utf-8").strip() if commit_file.is_file() else ""
     manifest = build_manifest(
         args.repo,
         str(run_id),
         str(attempt),
         str(stage),
         args.brave_core_ref,
-        commit_file.read_text(encoding="utf-8").strip(),
+        commit,
         volumes,
     )
     tag = release_tag(str(run_id), str(attempt))
@@ -226,6 +230,8 @@ def upload_checkpoint(args: argparse.Namespace) -> None:
 
 
 def download_checkpoint(args: argparse.Namespace) -> None:
+    if not os.environ.get("GH_TOKEN") and not os.environ.get("GITHUB_TOKEN"):
+        fail("GH_TOKEN or GITHUB_TOKEN is required to access release assets")
     run_id, attempt, stage = validate_identity(args.run_id, args.attempt, args.stage)
     destination = args.destination
     if destination.is_symlink():

@@ -40,15 +40,10 @@ host_arch="$(uname -m)"
 snapshot_tree() {
   local snapshot="$WORK/.snapshot-stage-$STAGE"
   log "snapshotting source and Ninja state"
-  CHROMIX_SNAPSHOT_MAX_SLOTS=16 \
+  CHROMIX_SNAPSHOT_MAX_SLOTS=1 \
   CHROMIX_SNAPSHOT_MAX_VOLUMES=64 \
-  CHROMIX_SNAPSHOT_VOLUME_BYTES=$((2 * 1024 * 1024 * 1024)) \
+  CHROMIX_SNAPSHOT_VOLUME_BYTES=$((18 * 1024 * 1024 * 1024 / 10)) \
     bash "$REPO/build/posix/ci-parts.sh" "$WORK" "$snapshot"
-  local slot
-  for slot in $(seq 1 16); do
-    mkdir -p "$snapshot/p$slot"
-    printf '%s\n' "$slot" > "$snapshot/p$slot/.snapshot-slot-$slot"
-  done
   emit snapshot_ready true
 }
 
@@ -93,12 +88,14 @@ run_core_or_handoff() {
 }
 
 mkdir -p "$SRC"
-if [ -f "$CORE_COMMIT" ]; then
-  recorded_commit="$(cat "$CORE_COMMIT")"
-  [ -f "$CORE_REF_FILE" ] ||
-    die "checkpoint is missing the Brave Core ref identity"
+if [ -f "$CORE_REF_FILE" ]; then
   [ "$(cat "$CORE_REF_FILE")" = "$BRAVE_CORE_REF" ] ||
     die "Brave Core ref changed across build stages"
+else
+  printf '%s\n' "$BRAVE_CORE_REF" > "$CORE_REF_FILE"
+fi
+if [ -f "$CORE_COMMIT" ]; then
+  recorded_commit="$(cat "$CORE_COMMIT")"
   actual_commit="$(git -C "$CORE" rev-parse HEAD 2>/dev/null)" ||
     die "Brave Core checkout is missing or incomplete"
   [ "$actual_commit" = "$recorded_commit" ] ||
