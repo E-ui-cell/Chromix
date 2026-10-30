@@ -1,0 +1,117 @@
+name: d630-core2-brave-source
+run-name: Core 2 Brave build (${{ inputs.brave_core_ref }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner_label:
+        description: GitHub-hosted Linux runner label; ubuntu-22.04 matches this repository's staged Chromium workflow
+        type: string
+        default: ubuntu-22.04
+        required: true
+      brave_core_ref:
+        description: Brave Core branch, tag, or commit to build
+        type: string
+        default: v1.101.7
+        required: true
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: core2-brave-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  stage_1:
+    name: Stage 1
+    uses: ./.github/workflows/d630-core2-brave-stage.yml
+    with:
+      runner_label: ${{ inputs.runner_label }}
+      stage: 1
+      brave_core_ref: ${{ inputs.brave_core_ref }}
+
+  stage_2:
+    name: Stage 2
+    needs: stage_1
+    if: needs.stage_1.result == 'success' && needs.stage_1.outputs.finished != 'true'
+    uses: ./.github/workflows/d630-core2-brave-stage.yml
+    with:
+      runner_label: ${{ inputs.runner_label }}
+      stage: 2
+      previous_stage: 1
+      previous_attempt: ${{ needs.stage_1.outputs.snapshot_attempt }}
+      brave_core_ref: ${{ inputs.brave_core_ref }}
+
+  stage_3:
+    name: Stage 3
+    needs: stage_2
+    if: needs.stage_2.result == 'success' && needs.stage_2.outputs.finished != 'true'
+    uses: ./.github/workflows/d630-core2-brave-stage.yml
+    with:
+      runner_label: ${{ inputs.runner_label }}
+      stage: 3
+      previous_stage: 2
+      previous_attempt: ${{ needs.stage_2.outputs.snapshot_attempt }}
+      brave_core_ref: ${{ inputs.brave_core_ref }}
+
+  stage_4:
+    name: Stage 4
+    needs: stage_3
+    if: needs.stage_3.result == 'success' && needs.stage_3.outputs.finished != 'true'
+    uses: ./.github/workflows/d630-core2-brave-stage.yml
+    with:
+      runner_label: ${{ inputs.runner_label }}
+      stage: 4
+      previous_stage: 3
+      previous_attempt: ${{ needs.stage_3.outputs.snapshot_attempt }}
+      brave_core_ref: ${{ inputs.brave_core_ref }}
+
+  stage_5:
+    name: Stage 5
+    needs: stage_4
+    if: needs.stage_4.result == 'success' && needs.stage_4.outputs.finished != 'true'
+    uses: ./.github/workflows/d630-core2-brave-stage.yml
+    with:
+      runner_label: ${{ inputs.runner_label }}
+      stage: 5
+      previous_stage: 4
+      previous_attempt: ${{ needs.stage_4.outputs.snapshot_attempt }}
+      brave_core_ref: ${{ inputs.brave_core_ref }}
+
+  stage_6:
+    name: Stage 6
+    needs: stage_5
+    if: needs.stage_5.result == 'success' && needs.stage_5.outputs.finished != 'true'
+    uses: ./.github/workflows/d630-core2-brave-stage.yml
+    with:
+      runner_label: ${{ inputs.runner_label }}
+      stage: 6
+      previous_stage: 5
+      previous_attempt: ${{ needs.stage_5.outputs.snapshot_attempt }}
+      brave_core_ref: ${{ inputs.brave_core_ref }}
+
+  stage_7:
+    name: Stage 7
+    needs: stage_6
+    if: needs.stage_6.result == 'success' && needs.stage_6.outputs.finished != 'true'
+    uses: ./.github/workflows/d630-core2-brave-stage.yml
+    with:
+      runner_label: ${{ inputs.runner_label }}
+      stage: 7
+      previous_stage: 6
+      previous_attempt: ${{ needs.stage_6.outputs.snapshot_attempt }}
+      brave_core_ref: ${{ inputs.brave_core_ref }}
+
+  stage_8:
+    name: Stage 8
+    needs: stage_7
+    if: needs.stage_7.result == 'success' && needs.stage_7.outputs.finished != 'true'
+    uses: ./.github/workflows/d630-core2-brave-stage.yml
+    with:
+      runner_label: ${{ inputs.runner_label }}
+      stage: 8
+      previous_stage: 7
+      previous_attempt: ${{ needs.stage_7.outputs.snapshot_attempt }}
+      brave_core_ref: ${{ inputs.brave_core_ref }}
