@@ -14,6 +14,21 @@ on:
         type: string
         default: v1.101.7
         required: true
+      resume_run_id:
+        description: Optional workflow run ID containing a prior checkpoint (artifacts retained 7 days)
+        type: string
+        default: ''
+        required: false
+      resume_stage:
+        description: Stage number of the checkpoint in resume_run_id (1-8)
+        type: string
+        default: '1'
+        required: false
+      resume_attempt:
+        description: Run attempt that uploaded the checkpoint
+        type: string
+        default: '1'
+        required: false
 
 permissions:
   actions: read
@@ -31,6 +46,9 @@ jobs:
       runner_label: ${{ inputs.runner_label }}
       stage: 1
       brave_core_ref: ${{ inputs.brave_core_ref }}
+      resume_run_id: ${{ inputs.resume_run_id }}
+      resume_stage: ${{ inputs.resume_stage }}
+      resume_attempt: ${{ inputs.resume_attempt }}
 
   stage_2:
     name: Stage 2

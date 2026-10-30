@@ -21,6 +21,7 @@ OUT="$SRC/out/Release"
 SYNC_READY="$WORK/.core2-sync-ready"
 SYNC_STARTED="$WORK/.core2-sync-started"
 CORE_COMMIT="$WORK/.core2-brave-core-commit"
+CORE_REF_FILE="$WORK/.core2-brave-core-ref"
 DEADLINE_EPOCH=$(( $(date +%s) + 240 * 60 ))
 
 emit() {
@@ -94,6 +95,10 @@ run_core_or_handoff() {
 mkdir -p "$SRC"
 if [ -f "$CORE_COMMIT" ]; then
   recorded_commit="$(cat "$CORE_COMMIT")"
+  [ -f "$CORE_REF_FILE" ] ||
+    die "checkpoint is missing the Brave Core ref identity"
+  [ "$(cat "$CORE_REF_FILE")" = "$BRAVE_CORE_REF" ] ||
+    die "Brave Core ref changed across build stages"
   actual_commit="$(git -C "$CORE" rev-parse HEAD 2>/dev/null)" ||
     die "Brave Core checkout is missing or incomplete"
   [ "$actual_commit" = "$recorded_commit" ] ||
@@ -110,6 +115,7 @@ else
     git -C "$CORE" fetch --depth=1 --no-tags origin "$BRAVE_CORE_REF"
   git -C "$CORE" checkout --detach FETCH_HEAD
   git -C "$CORE" rev-parse HEAD > "$CORE_COMMIT"
+  printf '%s\n' "$BRAVE_CORE_REF" > "$CORE_REF_FILE"
 fi
 
 export NPM_CONFIG_STORE_DIR="$WORK/.pnpm-store"
@@ -148,8 +154,22 @@ ENV
 free_gib="$(df -BG --output=avail "$WORK" | tail -n 1 | tr -dc '0-9')"
 log "available disk before Chromium compilation: ${free_gib:-unknown} GiB"
 
+disk_monitor() {
+  while sleep 300; do
+    local available
+    available="$(df -BG --output=avail "$WORK" | tail -n 1 | tr -dc '0-9')"
+    log "build disk monitor: ${available:-unknown} GiB available"
+  done
+}
+
+disk_monitor &
+DISK_MONITOR_PID=$!
+trap 'kill "$DISK_MONITOR_PID" 2>/dev/null || true; wait "$DISK_MONITOR_PID" 2>/dev/null || true' EXIT
 run_core_or_handoff "Building Brave Release for Intel Core 2 (Ninja jobs: 2)" \
   pnpm run build Release --ninja jobs:2
+kill "$DISK_MONITOR_PID" 2>/dev/null || true
+wait "$DISK_MONITOR_PID" 2>/dev/null || true
+trap - EXIT
 
 [ -d "$OUT" ] || die "expected Release output directory is missing: $OUT"
 [ -f "$OUT/args.gn" ] || die "generated GN arguments are missing: $OUT/args.gn"

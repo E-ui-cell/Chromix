@@ -20,6 +20,18 @@ on:
       brave_core_ref:
         required: true
         type: string
+      resume_run_id:
+        required: false
+        type: string
+        default: ''
+      resume_stage:
+        required: false
+        type: string
+        default: '1'
+      resume_attempt:
+        required: false
+        type: string
+        default: '1'
     outputs:
       finished:
         description: Whether the Core 2 build completed
@@ -46,6 +58,18 @@ jobs:
       - name: Record checkpoint attempt
         id: origin
         run: echo "attempt=$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+
+      - name: Validate external checkpoint selection
+        if: inputs.stage == 1 && inputs.resume_run_id != ''
+        env:
+          RESUME_RUN_ID: ${{ inputs.resume_run_id }}
+          RESUME_STAGE: ${{ inputs.resume_stage }}
+          RESUME_ATTEMPT: ${{ inputs.resume_attempt }}
+        run: |
+          set -euo pipefail
+          [[ "$RESUME_RUN_ID" =~ ^[0-9]{1,20}$ ]]
+          [[ "$RESUME_STAGE" =~ ^[1-8]$ ]]
+          [[ "$RESUME_ATTEMPT" =~ ^[1-9][0-9]{0,5}$ ]]
 
       - name: Record runner resources
         run: |
@@ -104,17 +128,32 @@ jobs:
           merge-multiple: true
           path: ${{ runner.temp }}/core2-restore
 
+      - name: Download checkpoint from an earlier workflow run
+        if: inputs.stage == 1 && inputs.resume_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          pattern: core2-brave-run-${{ inputs.resume_run_id }}-stage-${{ inputs.resume_stage }}-attempt-${{ inputs.resume_attempt }}-part*
+          run-id: ${{ inputs.resume_run_id }}
+          github-token: ${{ github.token }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/core2-restore
+
       - name: Restore previous stage checkpoint
-        if: inputs.stage > 1
+        if: inputs.stage > 1 || (inputs.stage == 1 && inputs.resume_run_id != '')
+        env:
+          STAGE: ${{ inputs.stage }}
+          PREVIOUS_ATTEMPT: ${{ inputs.previous_attempt }}
         run: |
           set -euo pipefail
-          test -n '${{ inputs.previous_attempt }}'
+          if [ "$STAGE" -gt 1 ]; then test -n "$PREVIOUS_ATTEMPT"; fi
           bash build/posix/restore-snapshot.sh \
             "${RUNNER_TEMP}/core2-restore" "${RUNNER_TEMP}/core2-work"
 
       - name: Verify restored disk headroom
-        if: inputs.stage > 1
-        run: df -h "${RUNNER_TEMP}/core2-work"
+        if: inputs.stage > 1 || (inputs.stage == 1 && inputs.resume_run_id != '')
+        run: |
+          df -hT "${RUNNER_TEMP}/core2-work"
+          df -B1 --output=source,size,used,avail,target "${RUNNER_TEMP}/core2-work"
 
       - name: Run build stage
         id: stage
@@ -131,7 +170,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: core2-brave-run-${{ github.run_id }}-stage-${{ inputs.stage }}-log-attempt-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/core2-stage-${{ inputs.stage }}.log
+          path: |
+            ${{ runner.temp }}/core2-stage-${{ inputs.stage }}.log
+            ${{ runner.temp }}/core2-runner-before-cleanup.log
           if-no-files-found: ignore
           retention-days: 14
           compression-level: 0
