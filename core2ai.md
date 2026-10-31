@@ -1,6 +1,6 @@
 # Brave/Chromium build flags for Intel Core 2
 
-This documents the settings used by the Core 2 Brave workflow [`.github/workflows/d630-core2-brave-source.yml`](.github/workflows/d630-core2-brave-source.yml) and the repository-based Chromium workflow [`.github/workflows/build-core2-chromium.yml`](.github/workflows/build-core2-chromium.yml). The workflows are the build source of truth.
+This documents the settings used by the Core 2 Brave workflow [`.github/workflows/d630-core2-brave-source.yml`](.github/workflows/d630-core2-brave-source.yml), the dedicated Chromium workflows [`.github/workflows/build-core2-chromium.yml`](.github/workflows/build-core2-chromium.yml) and [`.github/workflows/core2-build-linux-x64.yml`](.github/workflows/core2-build-linux-x64.yml), and the existing Linux x64 workflow [`.github/workflows/build-linux-x64.yml`](.github/workflows/build-linux-x64.yml). The workflows are the build source of truth.
 
 ## Target CPU
 
@@ -129,23 +129,31 @@ to `v1.101.7`; it does not apply the separate Chromix patch series. Change the
 workflow or stage script—not this reference text—when build behavior needs to
 change.
 
-## Repository Chromium workflow
+## Repository Chromium workflows
 
-Dispatch `build-core2-chromium.yml` for the repository's Linux x64 build. It
-uses the Linux-specific Chromium and ungoogled pins from
+The Core 2 workflows and standard Linux x64 workflow use the repository's
+Linux-specific Chromium and ungoogled pins from
 `tools/platform_pins.py` (currently Chromium `155.0.8059.39`), not the shared
-baseline version or an unpinned latest release. It builds the repository's
-Chromix-patched Chromium with the existing Linux build scripts. The workflow
-reuses the eight-stage POSIX workflow: each stage snapshots the work tree as
-numbered Actions artifacts, and the next stage restores it to continue Ninja's
+baseline version or an unpinned latest release. They build the repository's
+Chromix-patched Chromium with the existing Linux build scripts and the same
+eight-stage POSIX build. Dispatch `core2-build-linux-x64.yml` to use the
+existing Linux x64 workflow's resume, profile, and job-count controls with Core
+2 compiler flags always enabled. `build-core2-chromium.yml` remains available
+as the simpler dedicated Core 2 workflow. Alternatively, dispatch
+`build-linux-x64.yml` and set `core2_cpu` to `true`; that input defaults to
+`false`, preserving the normal Linux x64 target. Each stage snapshots the work
+tree as numbered Actions artifacts, and the next stage restores it to continue Ninja's
 incremental build. These snapshots are for the sequential stages within that
 workflow run; a new run starts from a clean checkout. Snapshot artifacts have
-limited Actions retention.
+limited Actions retention. The final upload uses the standard Linux x64
+artifact name, `chromix-linux-x64`, and the usual `chromix-linux-x64.zip`
+bundle containing the Chromium executable and the repository's launcher.
 
 The Core 2 option patches Chromium's x64 ABI flags to `-march=core2` and
-`-mtune=core2`; the workflow defaults to two Ninja jobs on the standard
-`ubuntu-22.04` runner. The input permits four jobs, but that increases memory
-pressure and should only be selected if the runner has sufficient available
-RAM. Other Linux builds leave the Core 2 flag option disabled. The workflow
-defaults to the `fast` build profile and does not require the optional upstream
-build cache.
+`-mtune=core2`. On the standard `ubuntu-22.04` runner, the existing
+`compile_jobs` input defaults to `auto` and can be set to a positive integer.
+The option is available only on Linux x64 and does not change the standard
+artifact name. Core 2 workflows default to the `fast` build profile. The dedicated Core 2
+Chromium workflow requires the pinned upstream source cache; disabling it would
+fall back to cold preparation, which is currently blocked by the unverified
+portablelinux ARM64 patch repair for this Chromium pin.

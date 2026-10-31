@@ -32,6 +32,7 @@ class PlatformWorkflowTest(unittest.TestCase):
     def test_platform_build_entrypoints_are_manual_dispatch_workflows(self):
         names = set(PLATFORMS) | {
             'build-win-x64-github', 'build-win-arm64-github', 'build-core2-chromium',
+            'core2-build-linux-x64',
         }
         for name in names:
             with self.subTest(name=name):
@@ -50,6 +51,9 @@ class PlatformWorkflowTest(unittest.TestCase):
                 self.assertNotIn('push', events(workflow))
                 dispatch = events(workflow)['workflow_dispatch']['inputs']
                 self.assertTrue(dispatch['use_upstream_cache']['default'])
+                if name == 'build-linux-x64':
+                    self.assertEqual(dispatch['core2_cpu']['type'], 'boolean')
+                    self.assertFalse(dispatch['core2_cpu']['default'])
                 modes = ['staged', 'single', 'verify'] if name == 'build-linux-arm64' else ['staged', 'single']
                 for key, choices, default in (
                     ('build_profile', ['fast', 'release'], 'fast'),
@@ -77,6 +81,8 @@ class PlatformWorkflowTest(unittest.TestCase):
                 inputs = job['with']
                 self.assertEqual((inputs['platform'], inputs['arch'], inputs['artifact']),
                                  (platform, arch, artifact))
+                if name == 'build-linux-x64':
+                    self.assertEqual(inputs['core2_cpu'], '${{ inputs.core2_cpu }}')
                 self.assertEqual(inputs['max-stages'], "${{ inputs.build_mode == 'single' && 1 || 8 }}")
                 self.assertEqual(inputs['build_profile'], "${{ inputs.build_profile || 'fast' }}")
                 self.assertIn("github.event_name != 'workflow_dispatch' || inputs.use_upstream_cache",

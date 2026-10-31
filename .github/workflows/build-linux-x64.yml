@@ -1,6 +1,6 @@
 name: build-linux-x64
 run-name: >-
-  ${{ github.event_name == 'workflow_dispatch' && format('lx64 profile={0} jobs={1} mode={2} cache={3} run={4} tree={5} attempt={6} artifacts={7}', inputs.build_profile, inputs.compile_jobs, inputs.build_mode, format('{0}', inputs.use_upstream_cache), inputs.resume_run_id, inputs.resume_tree_stage, inputs.resume_attempt, inputs.resume_artifact_ids) || 'build-linux-x64' }}
+  ${{ github.event_name == 'workflow_dispatch' && format('lx64 profile={0} jobs={1} mode={2} cache={3} run={4} tree={5} attempt={6} artifacts={7} core2={8}', inputs.build_profile, inputs.compile_jobs, inputs.build_mode, format('{0}', inputs.use_upstream_cache), inputs.resume_run_id, inputs.resume_tree_stage, inputs.resume_attempt, inputs.resume_artifact_ids, format('{0}', inputs.core2_cpu)) || 'build-linux-x64' }}
 
 on:
   workflow_dispatch:
@@ -39,6 +39,10 @@ on:
         description: 'Require pinned full upstream source + out/Default reuse; false permits cold builds'
         type: boolean
         default: true
+      core2_cpu:
+        description: 'Compile for Intel Core 2 (otherwise use the normal Linux x64 target)'
+        type: boolean
+        default: false
 permissions:
   actions: read
   contents: read
@@ -64,4 +68,5 @@ jobs:
       resume_attempt: ${{ inputs.resume_attempt || '1' }}
       resume_artifact_ids: ${{ inputs.resume_artifact_ids || '' }}
       use_upstream_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_upstream_cache }}
+      core2_cpu: ${{ inputs.core2_cpu }}
     secrets: inherit

@@ -27,9 +27,10 @@ jobs:
       platform: linux
       arch: x64
       runner: ubuntu-22.04
-      artifact: chromix-linux-x64-core2
+      artifact: chromix-linux-x64
       max-stages: 8
       build_profile: fast
       compile_jobs: ${{ inputs.compile_jobs }}
       core2_cpu: true
-      use_upstream_cache: false
+      use_upstream_cache: true
+    secrets: inherit

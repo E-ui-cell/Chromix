@@ -8,29 +8,34 @@ sys.path.insert(0, str(ROOT / "tools"))
 import platform_pins
 
 
-class Core2ChromiumWorkflowTest(unittest.TestCase):
-    def test_workflow_uses_repository_linux_pin_and_staged_build(self) -> None:
-        workflow = (ROOT / ".github/workflows/build-core2-chromium.yml").read_text(
+class LinuxX64Core2OptionTest(unittest.TestCase):
+    def test_dedicated_workflow_builds_pinned_chromium_for_core2(self) -> None:
+        workflow = (ROOT / ".github/workflows/core2-build-linux-x64.yml").read_text(
             encoding="utf-8"
         )
         pins = platform_pins.load_pins(ROOT, "linux")
 
         self.assertEqual(pins["ChromiumVersion"], "155.0.8059.39")
         self.assertIn("uses: ./.github/workflows/build-posix-github.yml", workflow)
-        self.assertIn("max-stages: 8", workflow)
+        self.assertIn("max-stages: ${{ inputs.build_mode == 'single' && 1 || 8 }}", workflow)
         self.assertIn("core2_cpu: true", workflow)
-        self.assertIn("use_upstream_cache: false", workflow)
-        self.assertIn("artifact: chromix-linux-x64-core2", workflow)
+        self.assertIn("use_upstream_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_upstream_cache }}", workflow)
+        self.assertIn("artifact: chromix-linux-x64", workflow)
+        self.assertIn("resume_artifact_ids: ${{ inputs.resume_artifact_ids || '' }}", workflow)
 
     def test_reusable_posix_stage_applies_core2_flags_only_when_enabled(self) -> None:
         stage = (ROOT / "build/posix/ci-stage.sh").read_text(encoding="utf-8")
         reusable = (
             ROOT / ".github/workflows/build-posix-github.yml"
         ).read_text(encoding="utf-8")
+        linux = (ROOT / ".github/workflows/build-linux-x64.yml").read_text(
+            encoding="utf-8"
+        )
 
         self.assertIn('case "${CHROMIX_CORE2_CPU:-0}" in', stage)
         self.assertIn('python3 "$REPO/tools/apply_core2_cpu_flags.py"', stage)
         self.assertIn("CHROMIX_CORE2_CPU: ${{ inputs.core2_cpu && '1' || '0' }}", reusable)
+        self.assertIn("core2_cpu: ${{ inputs.core2_cpu }}", linux)
 
 
 if __name__ == "__main__":
