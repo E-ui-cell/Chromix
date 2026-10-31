@@ -31,7 +31,7 @@ class WindowsArm64WorkflowTest(unittest.TestCase):
             self.assertEqual(set(workflow['on'][event]['inputs']),
                              {'build_profile', 'compile_jobs', 'use_upstream_cache', 'upstream_run_id'})
             self.assertIs(workflow['on'][event]['inputs']['use_upstream_cache']['default'], False)
-        self.assertEqual(workflow['on']['push']['branches'], ['main'])
+        self.assertNotIn('push', workflow['on'])
         self.assertEqual(workflow['env']['CHROMIX_USE_UPSTREAM_CACHE'],
                          "${{ (inputs.use_upstream_cache || inputs.upstream_run_id != '') && '1' || '0' }}")
         self.assertEqual(workflow['env']['CHROMIX_PREFER_UPSTREAM_CACHE'], '0')

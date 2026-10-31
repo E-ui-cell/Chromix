@@ -39,46 +39,6 @@ on:
         description: 'Build only: require pinned full upstream reuse; verify requires true and never restores a tree'
         type: boolean
         default: true
-  push:
-    branches: [main]
-    paths:
-      - 'build/*'
-      - 'build/linux/**'
-      - 'build/posix/**'
-      - 'patches/**'
-      - 'assets/fonts/**'
-      - 'tools/*upstream_cache.py'
-      - 'tools/upstream_object_cache.py'
-      - 'tools/upstream_script_identity.py'
-      - 'tools/apply_restored_patches.py'
-      - 'tools/prepare_restored_build.py'
-      - 'tools/restore_ninja.py'
-      - 'tools/bootstrap_gn.py'
-      - 'tools/restored_reuse_evidence.py'
-      - 'tools/verify_linux_bundle.py'
-      - 'sdk/python/chromix/_binary.py'
-      - 'tools/gen_posix_workflow.py'
-      - 'tools/merge_gn_args.py'
-      - 'tools/build_resources.py'
-      - 'tools/fingerprint*'
-      - 'tools/verify_patch_stack.py'
-      - 'tools/device_p0_audit.py'
-      - 'tools/canvas_chain_audit.py'
-      - 'tools/collect_device.py'
-      - 'tools/device_pool.py'
-      - 'sdk/python/chromix/_device*.py'
-      - 'sdk/python/chromix/device_pool.py'
-      - 'sdk/python/chromix/_canvas_chain.py'
-      - 'sdk/python/chromix/_render_integration.py'
-      - 'sdk/python/chromix/*.js'
-      - 'sdk/python/pyproject.toml'
-      - '.github/workflows/build-linux-arm64.yml'
-      - '.github/workflows/build-posix-github.yml'
-      - 'tools/platform_pins.py'
-      - 'CHROMIUM_LINUX_VERSION'
-      - 'CHROMIUM_VERSION'
-      - 'UNGOOGLED_VERSION'
-
 permissions:
   actions: read
   contents: read

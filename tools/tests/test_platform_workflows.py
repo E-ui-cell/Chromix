@@ -29,10 +29,14 @@ def events(workflow):
 
 
 class PlatformWorkflowTest(unittest.TestCase):
-    def test_exactly_six_build_entrypoints(self):
-        names = {load(path.stem)['name'] for path in DIRECTORY.glob('build-*.yml')
-                 if 'workflow_dispatch' in events(load(path.stem))}
-        self.assertEqual(names, set(PLATFORMS) | {'build-win-x64-github', 'build-win-arm64-github'})
+    def test_platform_build_entrypoints_are_manual_dispatch_workflows(self):
+        names = set(PLATFORMS) | {
+            'build-win-x64-github', 'build-win-arm64-github', 'build-core2-chromium',
+        }
+        for name in names:
+            with self.subTest(name=name):
+                self.assertIn('workflow_dispatch', events(load(name)))
+                self.assertNotIn('push', events(load(name)))
         self.assertFalse((DIRECTORY / 'build-cross-platform.yml').exists())
         self.assertEqual(set(events(load('build-posix-github'))), {'workflow_call'})
 
@@ -42,8 +46,8 @@ class PlatformWorkflowTest(unittest.TestCase):
             with self.subTest(name=name):
                 workflow = load(name)
                 self.assertEqual(workflow['name'], name)
-                self.assertEqual(set(events(workflow)), {'push', 'workflow_dispatch'})
-                self.assertEqual(events(workflow)['push']['branches'], ['main'])
+                self.assertEqual(set(events(workflow)), {'workflow_dispatch'})
+                self.assertNotIn('push', events(workflow))
                 dispatch = events(workflow)['workflow_dispatch']['inputs']
                 self.assertTrue(dispatch['use_upstream_cache']['default'])
                 modes = ['staged', 'single', 'verify'] if name == 'build-linux-arm64' else ['staged', 'single']
@@ -79,32 +83,20 @@ class PlatformWorkflowTest(unittest.TestCase):
                               inputs['use_upstream_cache'])
                 if runner:
                     self.assertEqual(inputs['runner'], runner)
-                paths = events(workflow)['push']['paths']
-                self.assertIn(f'.github/workflows/{name}.yml', paths)
-                self.assertIn('build/*', paths)
-                self.assertNotIn('build/**', paths)
-                self.assertIn(f'build/{platform}/**', paths)
-                self.assertNotIn('build/windows/**', paths)
         self.assertEqual(len(groups), 4)
         self.assertNotIn(load('build-win-x64-github')['concurrency']['group'], groups)
 
-    def test_windows_push_prefers_cache_and_keeps_manual_resume(self):
+    def test_windows_builds_are_manual_and_keep_resume(self):
         workflow = load('build-win-x64-github')
-        self.assertIn('push', events(workflow))
-        self.assertEqual(events(workflow)['push']['branches'], ['main'])
+        self.assertNotIn('push', events(workflow))
         self.assertFalse(workflow['concurrency']['cancel-in-progress'])
-        self.assertEqual(workflow['env']['CHROMIX_PREFER_UPSTREAM_CACHE'],
-                         "${{ github.event_name == 'push' && '1' || '0' }}")
+        self.assertEqual(workflow['env']['CHROMIX_PREFER_UPSTREAM_CACHE'], '0')
         self.assertEqual(workflow['env']['CHROMIX_USE_UPSTREAM_CACHE'],
                          "${{ (inputs.use_upstream_cache || inputs.upstream_run_id != '') && '1' || '0' }}")
         stage = next(step for step in workflow['jobs']['build-1']['steps'] if step.get('id') == 'stage')
         self.assertEqual(stage['env']['USE_UPSTREAM_CACHE'], '${{ inputs.use_upstream_cache }}')
         self.assertEqual(stage['env']['UPSTREAM_RUN_ID'], "${{ inputs.upstream_run_id }}")
         self.assertIn('resume_run_id', events(workflow)['workflow_dispatch']['inputs'])
-        paths = events(workflow)['push']['paths']
-        self.assertIn('build/windows/**', paths)
-        self.assertNotIn('build/posix/**', paths)
-        self.assertNotIn('build/**', paths)
         self.assertIn('build-12', workflow['jobs'])
 
 

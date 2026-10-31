@@ -52,15 +52,6 @@ def workflow():
         events[event]['inputs'] = {name: value for name, value in events[event]['inputs'].items()
                                    if name in ('build_profile', 'compile_jobs', 'use_upstream_cache', 'upstream_run_id')}
         events[event]['inputs']['use_upstream_cache']['default'] = False
-    events['push']['paths'] += [
-        '.github/workflows/build-win-x64-github.yml',
-        'tools/gen_windows_arm64_workflow.py',
-        'tools/verify_windows_bundle.py',
-        'tools/tests/test_windows_arm64_workflow.py',
-        'tools/tests/test_windows_arm64_build.py',
-        'tools/tests/test_windows_upstream_cache.py',
-        'tools/tests/test_verify_windows_bundle.py',
-    ]
     result['env'].pop('CHROMIX_WINDOWS_MIGRATION_PROFILE', None)
     result['env'].update(CHROMIX_TARGET_ARCH='arm64', CHROMIX_PREFER_UPSTREAM_CACHE='0')
     for index in range(1, 13):

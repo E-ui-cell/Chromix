@@ -134,16 +134,15 @@ class CrossPlatformBuildRegressionTest(unittest.TestCase):
                     self.assertLess(steps.index(resolve), steps.index(smoke))
                     self.assertLess(steps.index(resolve), steps.index(gate))
 
-    def test_posix_entrypoints_trigger_on_independent_pins(self):
+    def test_posix_entrypoints_are_manual_and_use_independent_pins(self):
         import yaml
 
         for platform in ("linux", "macos"):
             for arch in ("x64", "arm64"):
                 workflow = yaml.safe_load((WORKFLOWS / f"build-{platform}-{arch}.yml").read_text())
-                paths = workflow[True]["push"]["paths"]
-                self.assertIn(f"CHROMIUM_{platform.upper()}_VERSION", paths)
-                self.assertIn("CHROMIUM_VERSION", paths)
-                self.assertIn("tools/platform_pins.py", paths)
+                events = workflow.get("on", workflow.get(True))
+                self.assertEqual(set(events), {"workflow_dispatch"})
+                self.assertIn("build_mode", events["workflow_dispatch"]["inputs"])
 
     def test_linux_release_profile_reaches_every_cached_stage_on_both_architectures(self):
         import yaml
