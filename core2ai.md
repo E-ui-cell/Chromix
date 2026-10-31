@@ -1,6 +1,6 @@
 # Brave/Chromium build flags for Intel Core 2
 
-This documents the settings used by [`.github/workflows/d630-core2-brave-source.yml`](.github/workflows/d630-core2-brave-source.yml), which chains resumable jobs implemented by [`.github/workflows/d630-core2-brave-stage.yml`](.github/workflows/d630-core2-brave-stage.yml). The workflows are the build source of truth.
+This documents the settings used by the Core 2 Brave workflow [`.github/workflows/d630-core2-brave-source.yml`](.github/workflows/d630-core2-brave-source.yml) and the repository-based Chromium workflow [`.github/workflows/build-core2-chromium.yml`](.github/workflows/build-core2-chromium.yml). The workflows are the build source of truth.
 
 ## Target CPU
 
@@ -44,7 +44,7 @@ build settings:
 cpu_target=core2
 target_arch=x64
 v8_target_cpu=x64
-official_build=true
+official_build=false
 is_brave_release_build=0
 dcheck_always_on=false
 symbol_level=0
@@ -128,3 +128,24 @@ The staged workflow currently builds the selected Brave Core ref, defaulting
 to `v1.101.7`; it does not apply the separate Chromix patch series. Change the
 workflow or stage script—not this reference text—when build behavior needs to
 change.
+
+## Repository Chromium workflow
+
+Dispatch `build-core2-chromium.yml` for the repository's Linux x64 build. It
+uses the Linux-specific Chromium and ungoogled pins from
+`tools/platform_pins.py` (currently Chromium `155.0.8059.39`), not the shared
+baseline version or an unpinned latest release. It builds the repository's
+Chromix-patched Chromium with the existing Linux build scripts. The workflow
+reuses the eight-stage POSIX workflow: each stage snapshots the work tree as
+numbered Actions artifacts, and the next stage restores it to continue Ninja's
+incremental build. These snapshots are for the sequential stages within that
+workflow run; a new run starts from a clean checkout. Snapshot artifacts have
+limited Actions retention.
+
+The Core 2 option patches Chromium's x64 ABI flags to `-march=core2` and
+`-mtune=core2`; the workflow defaults to two Ninja jobs on the standard
+`ubuntu-22.04` runner. The input permits four jobs, but that increases memory
+pressure and should only be selected if the runner has sufficient available
+RAM. Other Linux builds leave the Core 2 flag option disabled. The workflow
+defaults to the `fast` build profile and does not require the optional upstream
+build cache.

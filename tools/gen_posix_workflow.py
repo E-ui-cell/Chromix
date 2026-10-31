@@ -47,6 +47,10 @@ on:
         required: false
         type: string
         default: auto
+      core2_cpu:
+        required: false
+        type: boolean
+        default: false
       resume_run_id:
         required: false
         type: string
@@ -252,6 +256,7 @@ def run_step(stage: int) -> str:
         id: stage
         env:
           CHROMIX_BUILD_PROFILE: ${{ inputs.build_profile }}
+          CHROMIX_CORE2_CPU: ${{ inputs.core2_cpu && '1' || '0' }}
           # Mac runtime gates need 45m in addition to packaging/checkpoint reserve.
           CHROMIX_RESERVE_MINUTES: ${{ inputs.platform == 'macos' && '90' || inputs['max-stages'] == 1 && '15' || '45' }}
           CHROMIX_USE_UPSTREAM_CACHE: ${{ inputs.use_upstream_cache && '1' || '0' }}

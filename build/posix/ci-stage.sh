@@ -192,6 +192,22 @@ else
   "$REPO/build/prepare-ungoogled.sh" "$WORK" "$PLATFORM" "$ARCH"
 fi
 
+case "${CHROMIX_CORE2_CPU:-0}" in
+  0) ;;
+  1)
+    [ "$PLATFORM:$ARCH" = linux:x64 ] ||
+      die "Core 2 compiler flags are supported only for Linux x64"
+    COMPILER_FLAGS="$SRC/build/config/compiler_cpu_abi.gn"
+    [ -f "$COMPILER_FLAGS" ] ||
+      die "Chromium compiler configuration is missing: $COMPILER_FLAGS"
+    python3 "$REPO/tools/apply_core2_cpu_flags.py" "$COMPILER_FLAGS"
+    grep -Fq '"-march=core2"' "$COMPILER_FLAGS" &&
+      grep -Fq '"-mtune=core2"' "$COMPILER_FLAGS" ||
+      die "Core 2 compiler flags were not applied"
+    ;;
+  *) die "CHROMIX_CORE2_CPU must be 0 or 1" ;;
+esac
+
 # ---- bounded compile ------------------------------------------------------
 NINJA_BUDGET=$(( $(remaining_min) - RESERVE_MINUTES ))
 if [ "$NINJA_BUDGET" -le 20 ]; then

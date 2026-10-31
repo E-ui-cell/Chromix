@@ -1,0 +1,35 @@
+name: build-core2-chromium
+run-name: Core 2 Chromium (${{ inputs.compile_jobs }} jobs, repo-pinned Linux version)
+
+on:
+  workflow_dispatch:
+    inputs:
+      compile_jobs:
+        description: Ninja jobs (2 recommended for the standard runner; 4 may need more memory)
+        type: choice
+        options: ['2', '4']
+        default: '2'
+        required: true
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: core2-chromium-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Linux x64 Core 2 build (8 resumable stages)
+    uses: ./.github/workflows/build-posix-github.yml
+    with:
+      platform: linux
+      arch: x64
+      runner: ubuntu-22.04
+      artifact: chromix-linux-x64-core2
+      max-stages: 8
+      build_profile: fast
+      compile_jobs: ${{ inputs.compile_jobs }}
+      core2_cpu: true
+      use_upstream_cache: false
