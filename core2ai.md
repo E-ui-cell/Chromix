@@ -55,9 +55,9 @@ ninja=j:2
 ```
 
 The three symbol-level settings reduce debug-symbol output and disk use.
-`use_debug_fission=false` disables debug fission. `ninja=j:2` is the workflow's
-build-wrapper concurrency setting (two jobs), not a CPU instruction or a GN
-compiler flag.
+`use_debug_fission=false` disables debug fission. The build command passes
+`--ninja j:2`, Brave CLI's `<key>:<value>` syntax for Ninja's `-j 2`; it caps
+compilation at two jobs and is not a GN compiler flag.
 
 The runner must be x86_64, and both Chromium and V8 GN targets are explicitly
 set to x64. The final stage checks the generated `args.gn` before accepting the

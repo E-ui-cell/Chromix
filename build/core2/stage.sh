@@ -154,7 +154,7 @@ disk_monitor &
 DISK_MONITOR_PID=$!
 trap 'kill "$DISK_MONITOR_PID" 2>/dev/null || true; wait "$DISK_MONITOR_PID" 2>/dev/null || true' EXIT
 run_core_or_handoff "Building Brave Release for Intel Core 2 (Ninja jobs: 2)" \
-  pnpm run build Release --ninja jobs:2
+  pnpm run build Release --ninja j:2
 kill "$DISK_MONITOR_PID" 2>/dev/null || true
 wait "$DISK_MONITOR_PID" 2>/dev/null || true
 trap - EXIT
