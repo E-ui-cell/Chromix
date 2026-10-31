@@ -198,13 +198,13 @@ def ensure_release(repo: str, tag: str, run_id: str) -> None:
 def upload_manifest(repo: str, tag: str, manifest: dict) -> None:
     manifest_name = f"{stage_prefix(manifest['stage'])}-manifest.json"
     with tempfile.TemporaryDirectory(prefix="core2-manifest-") as directory:
-        manifest_path = Path(directory) / "manifest.json"
+        manifest_path = Path(directory) / manifest_name
         manifest_path.write_text(
             json.dumps(manifest, sort_keys=True, indent=2) + "\n", encoding="utf-8"
         )
         run_gh(
             repo,
-            ["release", "upload", tag, f"{manifest_path}#{manifest_name}", "--clobber"],
+            ["release", "upload", tag, str(manifest_path), "--clobber"],
         )
 
 
@@ -281,7 +281,7 @@ def stream_upload(args: argparse.Namespace) -> None:
                 fail(f"checkpoint exceeds the {MAX_VOLUMES}-volume release limit")
             break
         asset_name = f"{prefix}-tree.tar.zst.{index:03d}"
-        temp_path = temp_dir / f".core2-release-volume-{index:03d}"
+        temp_path = temp_dir / asset_name
         size = 0
         digest = hashlib.sha256()
         try:
@@ -298,7 +298,7 @@ def stream_upload(args: argparse.Namespace) -> None:
                 break
             run_gh(
                 args.repo,
-                ["release", "upload", tag, f"{temp_path}#{asset_name}", "--clobber"],
+                ["release", "upload", tag, str(temp_path), "--clobber"],
             )
             volumes.append({"asset": asset_name, "size": size, "sha256": digest.hexdigest()})
             total_bytes += size

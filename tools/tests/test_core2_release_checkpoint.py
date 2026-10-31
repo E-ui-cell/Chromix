@@ -52,7 +52,8 @@ class FakeGh:
             return subprocess.CompletedProcess(command, 0, "", "")
         if args[:2] == ["release", "upload"]:
             tag = args[2]
-            source, asset = args[3].split("#", 1)
+            source = args[3]
+            asset = Path(source).name
             self.releases[tag][asset] = Path(source).read_bytes()
             return subprocess.CompletedProcess(command, 0, "", "")
         if args[:2] == ["release", "download"]:
@@ -238,9 +239,18 @@ class Core2ReleaseCheckpointTest(unittest.TestCase):
         ):
             stream_upload(stream_args)
             manifest_name = "stage-03-manifest.json"
+            self.assertIn(manifest_name, fake_gh.releases[tag])
             provisional = json.loads(fake_gh.releases[tag][manifest_name])
             self.assertFalse(provisional["complete"])
             self.assertEqual(len(provisional["volumes"]), 3)
+            self.assertEqual(
+                [name for name in fake_gh.releases[tag] if name.startswith("stage-03-tree")],
+                [
+                    "stage-03-tree.tar.zst.001",
+                    "stage-03-tree.tar.zst.002",
+                    "stage-03-tree.tar.zst.003",
+                ],
+            )
 
             finalize_checkpoint(
                 argparse.Namespace(

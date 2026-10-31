@@ -28,7 +28,7 @@ is_brave_release_build=0
 target_arch=x64
 gn_args_target_cpu=x64
 gn_args_v8_target_cpu=x64
-gn_args_is_official_build=true
+gn_args_is_official_build=false
 gn_args_symbol_level=0
 gn_args_blink_symbol_level=0
 gn_args_v8_symbol_level=0
@@ -63,13 +63,13 @@ The runner must be x86_64, and both Chromium and V8 GN targets are explicitly
 set to x64. The final stage checks the generated `args.gn` before accepting the
 executable.
 
-`gn_args_is_official_build=true` selects Chromium's optimized official-build configuration. It does **not** make this an official Brave release: `is_brave_release_build=0`. The workflow does not publish a release or include private Brave service credentials; some online Brave services may therefore be unavailable in the resulting build.
+`gn_args_is_official_build=false` avoids requiring Brave's private services key, which Brave Core requires for official builds. This is a non-official Brave build (`is_brave_release_build=0`); the workflow does not publish a release, and some online Brave services may be unavailable.
 
 ## Important distinctions
 
 - **Do not set `is_component_build=true` just to save disk space.** The current workflow builds the `Release` configuration and does not set that option. A component build changes the output layout; it is not a resumability mechanism. Incremental progress is handled by the workflow's checkpointed output tree.
 - **Do not copy Debian package flags into Chromium globally.** The `-O` level and most toolchain optimization choices are controlled by Chromium's GN toolchain. The Debian package-test flags `-ffast-math` and `-funroll-loops` are not part of this browser workflow and should not be added indiscriminately to browser code.
-- **LTO is not explicitly disabled by the settings listed above.** Because `is_official_build=true` selects upstream official-build defaults, do not describe this configuration as “no LTO” without checking the generated `args.gn` and effective compiler/linker commands. A no-ThinLTO variant would be a deliberate, separately verified configuration change.
+- **Do not assume official-build LTO defaults.** This workflow explicitly uses `is_official_build=false`; inspect generated `args.gn` and effective compiler/linker commands before describing its LTO configuration.
 - **CPU flags do not enable GPU features.** The Core 2 flags do not guarantee hardware video decoding, Vulkan, or accelerated rendering on the legacy Intel GM965/X3100 GPU. The workflow's generated GN arguments and runtime GPU diagnostics must be checked separately before claiming any of those features are enabled.
 
 ## Staged build and runner requirements
