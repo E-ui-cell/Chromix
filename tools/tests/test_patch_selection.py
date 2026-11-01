@@ -130,6 +130,12 @@ def test_historical153_keeps_root_patch_identity(tmp_path):
     assert all(path.startswith("patches/") for path, _ in patches)
 
 
+def test_unreviewed149_pin_fails_closed(tmp_path):
+    repo = clone_repo(tmp_path)
+    with pytest.raises(selection.SelectionError, match="unsupported Chromium patch version"):
+        selection.select(repo, "linux")
+
+
 def test_platform_swap_changes_selection_identity_and_preparation_key(tmp_path):
     repo = clone_repo(tmp_path, historical=True)
     linux_identity, _ = selection.select(repo, "linux")

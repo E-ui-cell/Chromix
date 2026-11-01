@@ -10,7 +10,7 @@ import platform_pins
 
 
 class LinuxX64Core2OptionTest(unittest.TestCase):
-    def test_149_workflow_starts_from_pinned_cache_without_external_checkpoint(self) -> None:
+    def test_149_workflow_defaults_to_cold_mode_without_external_checkpoint(self) -> None:
         workflow = (ROOT / ".github/workflows/core2-build-149-linux-x64.yml").read_text(
             encoding="utf-8"
         )
@@ -21,7 +21,7 @@ class LinuxX64Core2OptionTest(unittest.TestCase):
         self.assertEqual(pins["LinuxChromiumVersion"], "149.0.7827.200")
         self.assertEqual(cache["sources"]["linux"]["chromium_version"], "149.0.7827.200")
         self.assertIn("default: false", workflow)
-        self.assertIn("while no valid 149 cache is available", workflow)
+        self.assertIn("the 149 patch stack is not yet validated", workflow)
         self.assertIn(
             "use_upstream_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_upstream_cache }}",
             workflow,

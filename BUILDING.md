@@ -78,10 +78,15 @@ uses the pinned 149.0.7827.200 portablelinux source and does not accept a
 checkpoint from another Chromix run; its eight stages create and restore their
 own checkpoints. The pinned upstream cache is currently unavailable: the
 recorded artifact does not match the pinned 149 producer run. The workflow
-therefore defaults to a cold build (`use_upstream_cache=false`). Dispatch it
-with `build_mode=staged`, `build_profile=fast`, and `compile_jobs=auto`; only
-enable `use_upstream_cache` after a valid cache for the pinned 149 source is
-available.
+therefore defaults to not requiring that cache (`use_upstream_cache=false`).
+However, the current patch selector deliberately rejects 149, and initial
+source-context checks show the existing patch series needs a version-specific
+rebase before it can be applied safely. A cold-build setting alone does not
+make this workflow buildable. Do not dispatch it expecting a successful build
+until the 149 patch stack has been rebased and validated against the pinned
+ungoogled source. Once that is done, use `build_mode=staged`,
+`build_profile=fast`, and `compile_jobs=auto`; enable the cache only after a
+valid cache for the pinned 149 source is available.
 
 The original Linux x64/ARM64 bundles are published under `v153.0.8010.36`;
 that immutable tag remains at `d80f322148d8c64271b27b48d5b94291b67ab6bd`, not

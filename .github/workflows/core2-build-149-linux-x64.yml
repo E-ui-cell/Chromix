@@ -20,7 +20,7 @@ on:
         options: [staged, single]
         default: staged
       use_upstream_cache:
-        description: 'Require the pinned upstream cache; leave false for a cold build while no valid 149 cache is available'
+        description: 'Require the pinned upstream cache; false avoids it, but the 149 patch stack is not yet validated'
         type: boolean
         default: false
 permissions:
