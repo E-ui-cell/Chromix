@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import sys
 import unittest
@@ -9,13 +10,32 @@ import platform_pins
 
 
 class LinuxX64Core2OptionTest(unittest.TestCase):
+    def test_149_workflow_starts_from_pinned_cache_without_external_checkpoint(self) -> None:
+        workflow = (ROOT / ".github/workflows/core2-build-149-linux-x64.yml").read_text(
+            encoding="utf-8"
+        )
+        pins = platform_pins.load_pins(ROOT, "linux")
+        cache = json.loads((ROOT / "build/upstream-cache.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(pins["ChromiumVersion"], "149.0.7827.200")
+        self.assertEqual(pins["LinuxChromiumVersion"], "149.0.7827.200")
+        self.assertEqual(cache["sources"]["linux"]["chromium_version"], "149.0.7827.200")
+        self.assertIn(
+            "use_upstream_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_upstream_cache }}",
+            workflow,
+        )
+        self.assertNotIn("resume_run_id", workflow)
+        self.assertNotIn("resume_tree_stage", workflow)
+        self.assertNotIn("resume_artifact_ids", workflow)
+        self.assertNotIn("resume_attempt", workflow)
+
     def test_dedicated_workflow_builds_pinned_chromium_for_core2(self) -> None:
         workflow = (ROOT / ".github/workflows/core2-build-linux-x64.yml").read_text(
             encoding="utf-8"
         )
         pins = platform_pins.load_pins(ROOT, "linux")
 
-        self.assertEqual(pins["ChromiumVersion"], "155.0.8059.39")
+        self.assertEqual(pins["ChromiumVersion"], pins["LinuxChromiumVersion"])
         self.assertIn("uses: ./.github/workflows/build-posix-github.yml", workflow)
         self.assertIn("max-stages: ${{ inputs.build_mode == 'single' && 1 || 8 }}", workflow)
         self.assertIn("core2_cpu: true", workflow)

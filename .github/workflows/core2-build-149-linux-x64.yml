@@ -1,26 +1,10 @@
 name: core2-build-149-linux-x64
 run-name: >-
-  ${{ github.event_name == 'workflow_dispatch' && format('core2-149-lx64 profile={0} jobs={1} mode={2} cache={3} run={4} tree={5} attempt={6} artifacts={7} source={8}', inputs.build_profile, inputs.compile_jobs, inputs.build_mode, format('{0}', inputs.use_upstream_cache), inputs.resume_run_id, inputs.resume_tree_stage, inputs.resume_attempt, inputs.resume_artifact_ids, '149.0.7827.200') || 'core2-build-149-linux-x64' }}
+  ${{ github.event_name == 'workflow_dispatch' && format('core2-149-lx64 profile={0} jobs={1} mode={2} cache={3} source={4}', inputs.build_profile, inputs.compile_jobs, inputs.build_mode, format('{0}', inputs.use_upstream_cache), '149.0.7827.200') || 'core2-build-149-linux-x64' }}
 
 on:
   workflow_dispatch:
     inputs:
-      resume_run_id:
-        description: 'Completed Linux x64 run whose exact checkpoint starts this new eight-stage build; repo-supported older source is 149.0.7827.200'
-        type: string
-        default: ''
-      resume_tree_stage:
-        description: 'Donor checkpoint stage (1-8) for the repo-supported 149.0.7827.200 source tree'
-        type: string
-        default: '7'
-      resume_artifact_ids:
-        description: 'Complete comma-separated artifact ID set recorded for the donor checkpoint'
-        type: string
-        default: ''
-      resume_attempt:
-        description: 'Exact attempt that uploaded the donor checkpoint'
-        type: string
-        default: '1'
       compile_jobs:
         description: 'Ninja jobs: auto uses CPU/memory limits, or a positive integer'
         type: string
@@ -49,7 +33,7 @@ concurrency:
 
 jobs:
   build:
-    name: Linux x64 Core 2 (149.0.7827.200 source, 8-stage snapshot/resume)
+    name: Linux x64 Core 2 (149.0.7827.200 upstream cache, 8-stage build)
     uses: ./.github/workflows/build-posix-github.yml
     with:
       platform: linux
@@ -59,10 +43,6 @@ jobs:
       max-stages: ${{ inputs.build_mode == 'single' && 1 || 8 }}
       build_profile: ${{ inputs.build_profile || 'fast' }}
       compile_jobs: ${{ inputs.compile_jobs || 'auto' }}
-      resume_run_id: ${{ inputs.resume_run_id || '' }}
-      resume_tree_stage: ${{ inputs.resume_tree_stage || '7' }}
-      resume_attempt: ${{ inputs.resume_attempt || '1' }}
-      resume_artifact_ids: ${{ inputs.resume_artifact_ids || '' }}
       use_upstream_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_upstream_cache }}
       core2_cpu: true
     secrets: inherit
