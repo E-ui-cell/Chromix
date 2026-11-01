@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
-  "chromium_version": "153.0.8010.36",
-  "ungoogled_commit": "dd8fb9b5c837982faf41ba58cd30a5664e77c329",
+  "chromium_version": "149.0.7827.200",
+  "ungoogled_commit": "d45ea68702b5fb5ea4663308266c181616f10c24",
   "sources": {
     "linux": {
-      "chromium_version": "155.0.8059.39",
-      "ungoogled_commit": "ffeb45a2bb88bc56a1dfed31410aeb10e9efcd5a",
+      "chromium_version": "149.0.7827.200",
+      "ungoogled_commit": "d45ea68702b5fb5ea4663308266c181616f10c24",
       "repository": "ungoogled-software/ungoogled-chromium-portablelinux",
       "repository_id": 177191557,
-      "head_sha": "025d99db1673a21992534551598b73ca79360762",
-      "head_branch": "155.0.8059.39-1",
+      "head_sha": "d8a4fb4bf077ff5c836c138fba6fc76864c41a4a",
+      "head_branch": "149.0.7827.200-1",
       "event": "push",
       "workflow_path": ".github/workflows/build.yml",
       "run_id": 37906884923,
