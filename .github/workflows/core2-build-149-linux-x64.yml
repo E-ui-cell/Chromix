@@ -20,9 +20,9 @@ on:
         options: [staged, single]
         default: staged
       use_upstream_cache:
-        description: 'Require pinned full upstream source + out/Default reuse; false permits cold builds'
+        description: 'Require the pinned upstream cache; leave false for a cold build while no valid 149 cache is available'
         type: boolean
-        default: true
+        default: false
 permissions:
   actions: read
   contents: read
@@ -33,7 +33,7 @@ concurrency:
 
 jobs:
   build:
-    name: Linux x64 Core 2 (149.0.7827.200 upstream cache, 8-stage build)
+    name: Linux x64 Core 2 (149.0.7827.200, 8-stage build)
     uses: ./.github/workflows/build-posix-github.yml
     with:
       platform: linux

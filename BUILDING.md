@@ -74,11 +74,14 @@ not upstream runs. A missing or invalid required cache fails instead of falling
 back to a cold build or a 152 checkpoint.
 
 The dedicated [Core 2 Linux x64 workflow](.github/workflows/core2-build-149-linux-x64.yml)
-uses the pinned 149.0.7827.200 portablelinux source and upstream cache. It
-starts each run from that cache and does not accept a checkpoint from another
-Chromix run; its eight stages create and restore their own checkpoints. Dispatch
-it with `use_upstream_cache=true`, `build_mode=staged`, `build_profile=fast`,
-and `compile_jobs=auto`.
+uses the pinned 149.0.7827.200 portablelinux source and does not accept a
+checkpoint from another Chromix run; its eight stages create and restore their
+own checkpoints. The pinned upstream cache is currently unavailable: the
+recorded artifact does not match the pinned 149 producer run. The workflow
+therefore defaults to a cold build (`use_upstream_cache=false`). Dispatch it
+with `build_mode=staged`, `build_profile=fast`, and `compile_jobs=auto`; only
+enable `use_upstream_cache` after a valid cache for the pinned 149 source is
+available.
 
 The original Linux x64/ARM64 bundles are published under `v153.0.8010.36`;
 that immutable tag remains at `d80f322148d8c64271b27b48d5b94291b67ab6bd`, not

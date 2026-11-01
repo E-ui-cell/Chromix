@@ -20,6 +20,8 @@ class LinuxX64Core2OptionTest(unittest.TestCase):
         self.assertEqual(pins["ChromiumVersion"], "149.0.7827.200")
         self.assertEqual(pins["LinuxChromiumVersion"], "149.0.7827.200")
         self.assertEqual(cache["sources"]["linux"]["chromium_version"], "149.0.7827.200")
+        self.assertIn("default: false", workflow)
+        self.assertIn("while no valid 149 cache is available", workflow)
         self.assertIn(
             "use_upstream_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_upstream_cache }}",
             workflow,
